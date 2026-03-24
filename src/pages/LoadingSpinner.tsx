@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Copy, Check } from "lucide-react";
 
@@ -109,6 +109,107 @@ function ControlButton({
     >
       {children}
     </button>
+  );
+}
+
+/* ── Demo Loader (hex color variant for usage examples) ──────────────────── */
+
+function DemoLoader({ size, speed, hex }: { size: number; speed: string; hex: string }) {
+  const blockSize = Math.max(8, Math.round(size * 0.32));
+  const border = Math.max(1, Math.round(size * 0.04));
+  const id = `loader-demo-${size}`.replace(/[\s.]/g, "-");
+  const fill = `${hex}4D`;
+
+  return (
+    <>
+      <style>{`
+        @keyframes l3-${id} {
+          100% { background-position: -${blockSize}px -${blockSize}px, ${blockSize}px ${blockSize}px }
+        }
+        .${id} {
+          width: ${size}px;
+          aspect-ratio: 1;
+          border: ${border}px solid ${fill};
+          background:
+            conic-gradient(from -90deg at calc(100% - ${border}px) calc(100% - ${border}px), transparent 0 90deg, ${fill} 0),
+            conic-gradient(from -90deg at calc(100% - ${border}px) calc(100% - ${border}px), transparent 0 90deg, ${fill} 0);
+          background-size: ${blockSize}px ${blockSize}px;
+          background-position: 0 0;
+          animation: l3-${id} ${speed} infinite;
+        }
+      `}</style>
+      <div className={id} />
+    </>
+  );
+}
+
+/* ── Typewriter text ─────────────────────────────────────────────────────── */
+
+const typewriterMessages = [
+  "Looking for high impact code to target...",
+  "This may take a while. Feel free to explore Artemis while I work...",
+];
+
+const CHAR_SPEED = 30;
+const DISPLAY_DURATION = 3000;
+const ERASE_SPEED = 15;
+
+function TypewriterText() {
+  const [displayed, setDisplayed] = useState("");
+  const [messageIndex, setMessageIndex] = useState(0);
+  const phase = useRef<"typing" | "holding" | "erasing">("typing");
+  const charIndex = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const currentMessage = typewriterMessages[messageIndex];
+
+    function tick() {
+      if (phase.current === "typing") {
+        charIndex.current++;
+        setDisplayed(currentMessage.slice(0, charIndex.current));
+
+        if (charIndex.current >= currentMessage.length) {
+          phase.current = "holding";
+          timerRef.current = setTimeout(tick, DISPLAY_DURATION);
+        } else {
+          timerRef.current = setTimeout(tick, CHAR_SPEED);
+        }
+      } else if (phase.current === "holding") {
+        phase.current = "erasing";
+        timerRef.current = setTimeout(tick, ERASE_SPEED);
+      } else if (phase.current === "erasing") {
+        charIndex.current--;
+        setDisplayed(currentMessage.slice(0, charIndex.current));
+
+        if (charIndex.current <= 0) {
+          phase.current = "typing";
+          charIndex.current = 0;
+          setMessageIndex((prev) => (prev + 1) % typewriterMessages.length);
+          return;
+        } else {
+          timerRef.current = setTimeout(tick, ERASE_SPEED);
+        }
+      }
+    }
+
+    phase.current = "typing";
+    charIndex.current = 0;
+    setDisplayed("");
+    timerRef.current = setTimeout(tick, CHAR_SPEED);
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [messageIndex]);
+
+  return (
+    <div className="h-[40px] flex items-start justify-center">
+      <p className="text-sm leading-5 text-muted-foreground text-center max-w-[249px]">
+        {displayed}
+        <span className="inline-block w-[1px] h-[14px] bg-muted-foreground/50 ml-[1px] animate-pulse align-middle" />
+      </p>
+    </div>
   );
 }
 
@@ -303,6 +404,21 @@ export default function LoadingSpinner() {
           <pre className="bg-muted border rounded-xl p-5 text-xs leading-relaxed text-muted-foreground overflow-x-auto">
             {cssSnippet}
           </pre>
+        </div>
+
+        {/* ── Usage Examples ── */}
+        <div className="mt-12">
+          <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground block mb-4">
+            Usage Examples
+          </label>
+
+          {/* Empty State */}
+          <div className="rounded-xl border bg-card flex items-center justify-center min-h-[280px]">
+            <div className="flex flex-col items-center gap-[19px]">
+              <DemoLoader size={30} speed="1s" hex="#64748b" />
+              <TypewriterText />
+            </div>
+          </div>
         </div>
       </main>
     </div>
