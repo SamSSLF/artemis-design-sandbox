@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Copy, Check } from "lucide-react";
+import { Highlight, themes } from "prism-react-renderer";
 
 /* ── Configuration ────────────────────────────────────────────────────────── */
 
@@ -213,6 +214,68 @@ function TypewriterText() {
   );
 }
 
+/* ── Syntax-highlighted code block ────────────────────────────────────────── */
+
+const langMap: Record<string, string> = {
+  HTML: "markup",
+  CSS: "css",
+  JS: "javascript",
+};
+
+function HighlightedCode({ code, language }: { code: string; language: string }) {
+  const prismLang = langMap[language] ?? language;
+
+  return (
+    <Highlight theme={themes.github} code={code} language={prismLang}>
+      {({ style, tokens, getLineProps, getTokenProps }) => (
+        <pre
+          className="p-5 text-xs leading-relaxed overflow-x-auto"
+          style={{ ...style, margin: 0 }}
+        >
+          {tokens.map((line, i) => (
+            <div key={i} {...getLineProps({ line })}>
+              {line.map((token, key) => (
+                <span key={key} {...getTokenProps({ token })} />
+              ))}
+            </div>
+          ))}
+        </pre>
+      )}
+    </Highlight>
+  );
+}
+
+/* ── Tabbed code viewer ──────────────────────────────────────────────────── */
+
+function CodeTabs({ snippets, className = "" }: { snippets: Record<string, string>; className?: string }) {
+  const tabs = Object.keys(snippets);
+  const [active, setActive] = useState(tabs[0]);
+
+  return (
+    <div className={`rounded-xl border overflow-hidden ${className}`}>
+      {/* Tab bar */}
+      <div className="flex border-b bg-muted/50">
+        {tabs.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActive(tab)}
+            className={`px-4 py-2 text-xs font-medium transition-colors ${
+              active === tab
+                ? "bg-background text-foreground border-b-2 border-primary -mb-[1px]"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {/* Code panel */}
+      <HighlightedCode code={snippets[active]} language={active} />
+    </div>
+  );
+}
+
 /* ── Page ──────────────────────────────────────────────────────────────────── */
 
 export default function LoadingSpinner() {
@@ -229,7 +292,9 @@ export default function LoadingSpinner() {
   const blockSize = Math.max(8, Math.round(currentSize.value * 0.32));
   const borderW = Math.max(1, Math.round(currentSize.value * 0.04));
 
-  const cssSnippet = `.loader {
+  const spinnerSnippets = {
+    HTML: `<div class="loader"></div>`,
+    CSS: `.loader {
   width: ${currentSize.value}px;
   aspect-ratio: 1;
   border: ${borderW}px solid ${currentColor.hex}4D;
@@ -251,52 +316,90 @@ export default function LoadingSpinner() {
       -${blockSize}px -${blockSize}px,
        ${blockSize}px  ${blockSize}px;
   }
-}`;
+}`,
+  };
 
-  const usageExampleCode = `<!-- Empty-state loading screen -->
-<div class="empty-state">
+  const usageExampleSnippets = {
+    HTML: `<div class="empty-state">
   <div class="loader"></div>
-  <p class="status-text">
-    Looking for high impact code to target...
-  </p>
-</div>
+  <p class="status-text"></p>
+</div>`,
+    CSS: `.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 19px;
+}
 
-<style>
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 19px;
+.loader {
+  width: 30px;
+  aspect-ratio: 1;
+  border: 1px solid #64748b4D;
+  --c: conic-gradient(
+    from -90deg at calc(100% - 1px) calc(100% - 1px),
+    transparent 0 90deg, #64748b4D 0
+  );
+  background: var(--c), var(--c);
+  background-size: 10px 10px;
+  background-position: 0 0;
+  animation: spin 1s infinite;
+}
+
+@keyframes spin {
+  100% {
+    background-position: -10px -10px, 10px 10px;
   }
+}
 
-  .loader {
-    width: 30px;
-    aspect-ratio: 1;
-    border: 1px solid #64748b4D;
-    --c: conic-gradient(
-      from -90deg at calc(100% - 1px) calc(100% - 1px),
-      transparent 0 90deg, #64748b4D 0
-    );
-    background: var(--c), var(--c);
-    background-size: 10px 10px;
-    background-position: 0 0;
-    animation: spin 1s infinite;
-  }
+.status-text {
+  font-size: 14px;
+  line-height: 20px;
+  color: #64748b;
+  text-align: center;
+  max-width: 249px;
+}`,
+    JS: `const messages = [
+  "Looking for high impact code to target...",
+  "This may take a while. Feel free to explore Artemis while I work...",
+];
 
-  @keyframes spin {
-    100% {
-      background-position: -10px -10px, 10px 10px;
+const CHAR_SPEED = 30;   // ms per character (typing)
+const HOLD_DURATION = 3000; // ms to display full message
+const ERASE_SPEED = 15;  // ms per character (erasing)
+
+const el = document.querySelector(".status-text");
+let msgIndex = 0;
+let charIndex = 0;
+let phase = "typing"; // "typing" | "holding" | "erasing"
+
+function tick() {
+  const msg = messages[msgIndex];
+
+  if (phase === "typing") {
+    charIndex++;
+    el.textContent = msg.slice(0, charIndex);
+    if (charIndex >= msg.length) {
+      phase = "holding";
+      setTimeout(tick, HOLD_DURATION);
+    } else {
+      setTimeout(tick, CHAR_SPEED);
     }
+  } else if (phase === "holding") {
+    phase = "erasing";
+    setTimeout(tick, ERASE_SPEED);
+  } else {
+    charIndex--;
+    el.textContent = msg.slice(0, charIndex);
+    if (charIndex <= 0) {
+      phase = "typing";
+      msgIndex = (msgIndex + 1) % messages.length;
+    }
+    setTimeout(tick, charIndex <= 0 ? CHAR_SPEED : ERASE_SPEED);
   }
+}
 
-  .status-text {
-    font-size: 14px;
-    line-height: 20px;
-    color: #64748b;
-    text-align: center;
-    max-width: 249px;
-  }
-</style>`;
+tick();`,
+  } as const;
 
   return (
     <div className="min-h-screen bg-background">
@@ -423,14 +526,20 @@ export default function LoadingSpinner() {
           </div>
         </div>
 
-        {/* CSS Snippet */}
+        {/* Code */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              CSS Snippet
+              Code
             </label>
             <button
-              onClick={() => copy(cssSnippet)}
+              onClick={() =>
+                copy(
+                  Object.entries(spinnerSnippets)
+                    .map(([lang, code]) => `/* ${lang} */\n${code}`)
+                    .join("\n\n"),
+                )
+              }
               className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               {copied ? (
@@ -446,9 +555,7 @@ export default function LoadingSpinner() {
               )}
             </button>
           </div>
-          <pre className="bg-muted border rounded-xl p-5 text-xs leading-relaxed text-muted-foreground overflow-x-auto">
-            {cssSnippet}
-          </pre>
+          <CodeTabs snippets={spinnerSnippets} />
         </div>
 
         {/* ── Usage Examples ── */}
@@ -465,10 +572,8 @@ export default function LoadingSpinner() {
             </div>
           </div>
 
-          {/* Code for the example */}
-          <pre className="bg-muted border rounded-xl p-5 text-xs leading-relaxed text-muted-foreground overflow-x-auto mt-4">
-            {usageExampleCode}
-          </pre>
+          {/* Tabbed code viewer */}
+          <CodeTabs snippets={usageExampleSnippets} className="mt-4" />
         </div>
       </main>
     </div>
