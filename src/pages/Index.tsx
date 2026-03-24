@@ -28,7 +28,7 @@ const prototypes: Prototype[] = [
   },
   {
     title: "Loading Spinner",
-    description: "Geometric conic-gradient spinner with configurable speed, size, color, and GIF export.",
+    description: "Geometric conic-gradient spinner with configurable speed, size, and color.",
     path: "/loading-spinner",
     status: "ready",
   },
