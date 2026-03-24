@@ -253,6 +253,51 @@ export default function LoadingSpinner() {
   }
 }`;
 
+  const usageExampleCode = `<!-- Empty-state loading screen -->
+<div class="empty-state">
+  <div class="loader"></div>
+  <p class="status-text">
+    Looking for high impact code to target...
+  </p>
+</div>
+
+<style>
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 19px;
+  }
+
+  .loader {
+    width: 30px;
+    aspect-ratio: 1;
+    border: 1px solid #64748b4D;
+    --c: conic-gradient(
+      from -90deg at calc(100% - 1px) calc(100% - 1px),
+      transparent 0 90deg, #64748b4D 0
+    );
+    background: var(--c), var(--c);
+    background-size: 10px 10px;
+    background-position: 0 0;
+    animation: spin 1s infinite;
+  }
+
+  @keyframes spin {
+    100% {
+      background-position: -10px -10px, 10px 10px;
+    }
+  }
+
+  .status-text {
+    font-size: 14px;
+    line-height: 20px;
+    color: #64748b;
+    text-align: center;
+    max-width: 249px;
+  }
+</style>`;
+
   return (
     <div className="min-h-screen bg-background">
       {/* ── Nav bar ── */}
@@ -419,6 +464,11 @@ export default function LoadingSpinner() {
               <TypewriterText />
             </div>
           </div>
+
+          {/* Code for the example */}
+          <pre className="bg-muted border rounded-xl p-5 text-xs leading-relaxed text-muted-foreground overflow-x-auto mt-4">
+            {usageExampleCode}
+          </pre>
         </div>
       </main>
     </div>
